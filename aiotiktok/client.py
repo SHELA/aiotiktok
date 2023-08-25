@@ -31,7 +31,7 @@ class Client:
             "Connection": "keep-alive",
         }
 
-    async def _request(
+    async def make_request(
         self,
         url: str,
         method: str = "GET",
@@ -47,7 +47,7 @@ class Client:
                 params=params,
                 data=data,
                 headers=headers,
-                allow_redirects=allow_redirects,
+                follow_redirects=allow_redirects,
             )
             response_headers = response.headers
             try:
@@ -58,7 +58,7 @@ class Client:
 
     async def get_video_id(self, url: str) -> str:
         if "@" not in url:
-            headers = (await self._request(url, allow_redirects=False)).get(
+            headers = (await self.make_request(url, allow_redirects=False)).get(
                 "headers", {}
             )
             url = headers.get("Location").split("?")[0]
@@ -80,7 +80,7 @@ class Client:
             video_id = await self.get_video_id(url)
         api_link = self.api_url.format(video_id)
         data = (
-            (await self._request(api_link, headers=self.api_headers))
+            (await self.make_request(api_link, headers=self.api_headers))
             .get("response", {})
             .get("aweme_list", {})[0]
         )
@@ -98,7 +98,7 @@ class Client:
         :return: list[:class:`aiotiktok.types.VideoData`]
         """
         url = urljoin(self.base_url, f"@{username}")
-        response = await self._request(url, headers=self.headers)
+        response = await self.make_request(url, headers=self.headers)
         data = extract_data_from_html(response.get("response", b"").decode())
         item_module = data.get("ItemModule")
         videos = []
@@ -113,12 +113,12 @@ class Client:
         :return :class:`aiotiktok.types.Author`:
         """
         url = urljoin(self.base_url, f"@{username}")
-        response = await self._request(url, headers=self.headers)
+        response = await self.make_request(url, headers=self.headers)
         data = extract_data_from_html(response.get("response", b"").decode())
         return extract_user_data(data)
 
     async def sign_url(self, url: str) -> dict:
-        request = await self._request(
+        request = await self.make_request(
             url=self.signature_url, method="POST", data={"url": url}
         )
         return request.get("response", {})
@@ -136,7 +136,7 @@ class Client:
             "user-agent": signature_data.get("navigator", {}).get("user_agent"),
         }
         api_response = (
-            await self._request(url=static_user_videos_url, headers=headers)
+            await self.make_request(url=static_user_videos_url, headers=headers)
         ).get("response", {})
         user_videos = [video for video in api_response.get("itemList", [])]
         has_more = api_response.get("hasMore")
@@ -147,7 +147,7 @@ class Client:
             signature_data = await self.sign_url(unsigned_url)
             headers.update({"x-tt-params": signature_data.get("x-tt-params")})
             api_response = (
-                await self._request(url=static_user_videos_url, headers=headers)
+                await self.make_request(url=static_user_videos_url, headers=headers)
             ).get("response")
             user_videos.extend(api_response.get("itemList"))
             has_more = api_response.get("hasMore")
