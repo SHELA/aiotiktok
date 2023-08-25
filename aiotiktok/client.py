@@ -47,7 +47,7 @@ class Client:
                 params=params,
                 data=data,
                 headers=headers,
-                follow_redirects=allow_redirects,
+                allow_redirects=allow_redirects,
             )
             response_headers = response.headers
             try:
